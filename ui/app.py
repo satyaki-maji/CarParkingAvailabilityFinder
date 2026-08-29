@@ -1,4 +1,7 @@
 import os
+from copy import deepcopy
+from datetime import datetime, timezone as utc_timezone
+from zoneinfo import ZoneInfo
 
 import folium
 import pydeck as pdk
@@ -10,6 +13,23 @@ from streamlit_folium import st_folium
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 DEFAULT_LATITUDE = 1.3521
 DEFAULT_LONGITUDE = 103.8198
+TIMEZONES = [
+    "Asia/Singapore",
+    "Asia/Kolkata",
+    "UTC",
+    "Asia/Tokyo",
+    "Europe/London",
+    "America/New_York",
+]
+
+
+def localize_timestamp(timestamp, timezone_name):
+    if not timestamp:
+        return None
+    parsed = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=utc_timezone.utc)
+    return parsed.astimezone(ZoneInfo(timezone_name)).strftime("%Y-%m-%d %H:%M:%S %Z")
 
 
 def fetch_carparks(latitude, longitude, radius_meters, lot_type, limit):
@@ -27,7 +47,12 @@ def fetch_carparks(latitude, longitude, radius_meters, lot_type, limit):
 
 
 st.set_page_config(page_title="Singapore Parking Finder", page_icon="🅿️", layout="wide")
-st.title("🅿️ Singapore Parking Finder")
+header_title, header_clock = st.columns([3, 1])
+header_title.title("🅿️ Singapore Parking Finder")
+with header_clock:
+    timezone_name = st.selectbox("Timezone", TIMEZONES, index=0, key="timezone_name")
+    current_time = datetime.now(ZoneInfo(timezone_name)).strftime("%Y-%m-%d %H:%M:%S %Z")
+    st.markdown(f"<div style='text-align:right;font-size:0.9rem'>🕒 {current_time}<br><small>All times shown in {timezone_name}</small></div>", unsafe_allow_html=True)
 st.caption("Live HDB car-park availability, sorted by distance from your selected location.")
 
 if "search_latitude" not in st.session_state:
@@ -84,6 +109,9 @@ if search:
 
 response = st.session_state.response
 results = response.get("results", [])
+localized_response = deepcopy(response)
+for item in localized_response.get("results", []):
+    item["lastSyncTime"] = localize_timestamp(item.get("lastSyncTime"), timezone_name)
 
 if response.get("isDataStale"):
     st.warning(response.get("warning") or "Availability data may be stale.")
@@ -146,7 +174,7 @@ with visual_tab:
                 "Available": item["lotsAvailable"],
                 "Total": item["totalLots"],
                 "Distance (m)": round(item["distanceMeters"]),
-                "Last synced": item.get("lastSyncTime"),
+                "Last synced": localize_timestamp(item.get("lastSyncTime"), timezone_name),
             }
             for item in results
         ],
@@ -155,5 +183,5 @@ with visual_tab:
     )
 
 with json_tab:
-    st.caption("Raw response returned by the Java backend API.")
-    st.json(response)
+    st.caption(f"Backend response with last-sync timestamps converted to {timezone_name}.")
+    st.json(localized_response)
