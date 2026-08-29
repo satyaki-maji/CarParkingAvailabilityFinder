@@ -16,5 +16,33 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
       - ./db/HDBCarparkInformation.csv:/docker-entrypoint-initdb.d/HDBCarparkInformation.csv
 
+  app:
+    build:
+      context: ./app
+    container_name: parking-app
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: parking
+      DB_USERNAME: admin
+      DB_PASSWORD: password
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_started
+
+  ui:
+    build:
+      context: ./ui
+    container_name: parking-ui
+    environment:
+      BACKEND_URL: http://app:8080
+    ports:
+      - "8501:8501"
+    depends_on:
+      app:
+        condition: service_started
+
 volumes:
   postgres-data:

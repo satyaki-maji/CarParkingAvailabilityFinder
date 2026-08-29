@@ -67,5 +67,13 @@ CREATE TABLE IF NOT EXISTS carpark_availability (
     PRIMARY KEY (carpark_number, lot_type)
 );
 
+-- Keeps existing named Docker volumes compatible with the availability freshness checks.
+ALTER TABLE carpark_availability
+    ADD COLUMN IF NOT EXISTS last_sync_time TIMESTAMP;
+
+-- The live feed includes valid carparks that are absent from the static HDB dataset.
+ALTER TABLE carpark_availability
+    DROP CONSTRAINT IF EXISTS carpark_availability_carpark_number_fkey;
+
 -- 7. Create index on availability filtering attributes
 CREATE INDEX idx_carpark_availability_lots ON carpark_availability (lot_type, lots_available);
