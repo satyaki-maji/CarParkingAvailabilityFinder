@@ -59,7 +59,7 @@ CREATE INDEX idx_carpark_location ON carpark USING GIST (location);
 
 -- 6. Create the dynamic availability table
 CREATE TABLE IF NOT EXISTS carpark_availability (
-    carpark_number VARCHAR(10) REFERENCES carpark(carpark_number),
+    carpark_number VARCHAR(10),
     lot_type VARCHAR(5),
     total_lots INTEGER,
     lots_available INTEGER,
