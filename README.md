@@ -80,6 +80,17 @@ Add these query parameters:
 
 The response contains nearby car-park details, available/total lots, distance, coordinates, `lastSyncTime`, and staleness information when live ingestion is delayed.
 
+## Run automated tests
+
+Run the backend unit tests from the `app` directory:
+
+```bash
+cd app
+mvn test
+```
+
+The tests cover the PostGIS coordinate-transformation/proximity SQL, stale-result detection, and the scheduler's failed or empty live-feed behavior without requiring a running database.
+
 ## Logs and shutdown
 
 Follow logs for a service:
